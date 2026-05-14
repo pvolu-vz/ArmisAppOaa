@@ -18,6 +18,11 @@ This project has two defined agent workflows. When the user's request matches th
 - DO NOT use bare `print()` for logging — use the `logging` module throughout (startup banner is the only exception)
 - ONLY generate files inside the current workspace
 
+## Security & Secrets
+- ALWAYS scan files for hardcoded credentials, API tokens, and secrets BEFORE running git push or git commit
+- Check README.md, .env files, sample data, and config files for exposed credentials
+- Verify .gitignore excludes all .env variants (.env, .env.lab, .env.local, etc.) before any commit
+
 ### Reference Materials
 
 Before generating any code, read all three reference files in full:
@@ -50,11 +55,19 @@ Before writing any code, clarify:
 
 If a flat file (CSV/XLSX) is the source, ensure a representative sample with at least a few data rows exists in `samples/` before writing code. Do not proceed without it.
 
-**Data Sample Discovery:** Before generating any code, check `./integrations/<system_slug>/samples/`:
+## Data Sample Discovery:  
+- Before generating any code, check `./integrations/<system_slug>/samples/`:
 - If samples exist — read each file and use field names, headers, and value patterns to populate the entity model, attribute names, and permission values. Do not ask the user to describe what the sample already shows.
 - If no samples exist — create `./integrations/<system_slug>/samples/SAMPLES.md` explaining what files to place there.
 
 Skip requirements gathering only if the user's request already provides enough detail to proceed directly to Step 2.
+
+
+## Database Schema Verification
+- For JDE/SQL integration work, NEVER assume table availability or column names - ask the user to confirm accessible tables before planning
+- Verify exact column names (e.g., `default_user_role_gid` vs `user_role_gid`) before writing queries
+- JDE table prefixes vary (UL, AU, FS, AB, EA, RL, SC) - confirm per-table prefix with user or sample data
+- Use case-insensitive deduplication for role IDs and similar identifiers from JDE
 
 #### Step 2 — Generate All Artifacts
 
@@ -100,6 +113,7 @@ All scripts must follow this CLI contract:
 | `--log-level DEBUG\|INFO\|WARNING\|ERROR` | Logging verbosity |
 | `--provider-name <name>` | Provider name in Veza (optional override) |
 | `--datasource-name <name>` | Datasource name in Veza (optional override) |
+
 
 #### Step 3 — Auto-Validate and Report
 
@@ -222,6 +236,12 @@ cd ./integrations/<slug>
   --save-json \
   --log-level <log_level>
 ```
+
+## Deployment Caution
+- NEVER push to URLs that look like production without explicit user confirmation
+- Prefer manual UI steps over CLI commands when the user is performing a one-time setup (e.g., token generation)
+- When removing files/directories, scope the removal precisely - confirm with the user if cascading dependencies (like logs/) might exist
+
 
 Add `--provider-name` and `--datasource-name` only if the user provided overrides.
 
