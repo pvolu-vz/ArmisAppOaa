@@ -439,8 +439,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--veza-api-key", default=None, metavar="KEY",
                         help="Veza API key. Env: VEZA_API_KEY")
     # OAA identity
-    parser.add_argument("--provider-name", default="Armis",
-                        help="Provider name in Veza (default: Armis)")
+    parser.add_argument("--provider-name", default="Armis Centrix",
+                        help="Provider name in Veza (default: Armis Centrix)")
     parser.add_argument("--datasource-name", default="Armis Centrix",
                         help="Datasource name in Veza (default: Armis Centrix)")
     # Run control
