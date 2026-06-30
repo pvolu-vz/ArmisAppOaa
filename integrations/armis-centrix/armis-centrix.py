@@ -294,9 +294,10 @@ class ArmisOAABuilder:
             "report_permissions", OAAPropertyType.STRING
         )
 
-    def build_roles(self, roles: list[dict]) -> None:
-        """Create local_roles and assign permissions from the Armis permission tree."""
+    def build_roles(self, roles: list[dict]) -> dict:
+        """Create local_roles and assign permissions. Returns name→id mapping for user assignment."""
         mapper = PermissionMapper()
+        role_name_to_id = {}
         for role_data in roles:
             role_id = str(role_data["roleId"])
             role_name = role_data["name"]
@@ -305,9 +306,11 @@ class ArmisOAABuilder:
             granted = mapper.get_granted_permissions(flat_perms)
             if granted:
                 role.add_permissions(sorted(granted))
+            role_name_to_id[role_name] = role_id
             log.debug("Role %r (id=%s): %d OAA permissions granted", role_name, role_id, len(granted))
+        return role_name_to_id
 
-    def build_users(self, users: list[dict]) -> None:
+    def build_users(self, users: list[dict], role_name_to_id: dict) -> None:
         """Create local_users and assign roles from roleAssignment (authoritative field)."""
         for user_data in users:
             # Prefer username, fall back to email, then id
@@ -324,6 +327,7 @@ class ArmisOAABuilder:
             )
             if email:
                 user.email = email
+                user.add_identity(email)
             user.is_active = bool(user_data.get("isActive", True))
 
             user.set_property(
@@ -337,12 +341,17 @@ class ArmisOAABuilder:
             report_perms = user_data.get("reportPermissions") or "NONE"
             user.set_property("report_permissions", report_perms)
 
-            # roleAssignment is authoritative; can be null (no role assigned)
+            # roleAssignment is authoritative; can be null (no role assigned).
+            # add_role() key must match the local_roles dict key (unique_id when provided).
             role_assignments = user_data.get("roleAssignment") or []
             for assignment in role_assignments:
                 for role_name in assignment.get("name", []):
-                    user.add_role(role_name)
-                    log.debug("User %r → role %r", username, role_name)
+                    role_id = role_name_to_id.get(role_name)
+                    if role_id:
+                        user.add_role(role_id, apply_to_application=True)
+                        log.debug("User %r → role %r (id=%s)", username, role_name, role_id)
+                    else:
+                        log.warning("User %r: role %r not found in registry, skipping", username, role_name)
 
             log.debug(
                 "User %r (id=%s): active=%s, roles=%d",
@@ -502,8 +511,8 @@ def main() -> None:
 
     # Build OAA payload
     builder = ArmisOAABuilder(args.provider_name, args.datasource_name)
-    builder.build_roles(roles)
-    builder.build_users(users)
+    role_name_to_id = builder.build_roles(roles)
+    builder.build_users(users, role_name_to_id)
 
     log.info(
         "OAA payload built: %d users, %d roles",
