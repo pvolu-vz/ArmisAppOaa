@@ -185,7 +185,7 @@ class ArmisClient:
         """Fetch all roles — single call, no pagination needed."""
         resp = self._session.get(f"{self._base_url}/api/v1/roles/", timeout=30)
         resp.raise_for_status()
-        roles = resp.json()
+        roles = resp.json()["data"]
         log.info("Total Armis roles fetched: %d", len(roles))
         return roles
 
