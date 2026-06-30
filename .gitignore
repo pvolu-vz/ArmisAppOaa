@@ -1,4 +1,10 @@
 .env
-integrations/*
 venv/
 .DS_Store
+
+# Integration-level exclusions (track source files; ignore runtime outputs)
+integrations/*/venv/
+integrations/*/logs/
+integrations/**/*.log
+integrations/**/*_oaa_payload.json
+integrations/**/preflight_*.log
